@@ -1,4 +1,4 @@
-FROM infrablocks/alpine-aws-s3-config:0.5.0-rc.1
+FROM infrablocks/alpine-aws-s3-config:0.6.0
 
 # Inspired by hashicorp/docker-consul
 
