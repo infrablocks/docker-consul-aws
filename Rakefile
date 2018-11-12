@@ -146,4 +146,10 @@ namespace :version do
     repo.add_tag(next_tag.to_s)
     repo.push('origin', 'master', tags: true)
   end
+
+  task :release do
+    next_tag = latest_tag.release!
+    repo.add_tag(next_tag.to_s)
+    repo.push('origin', 'master', tags: true)
+  end
 end
