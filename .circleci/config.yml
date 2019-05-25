@@ -3,7 +3,7 @@ jobs:
   prerelease:
     working_directory: ~/docker-consul-aws
     docker:
-    - image: docker:18.06.1-ce-git
+    - image: docker:18.09.6-git
     steps:
     - checkout
     - setup_remote_docker
@@ -16,7 +16,7 @@ jobs:
   release:
     working_directory: ~/docker-consul-aws
     docker:
-    - image: docker:18.06.1-ce-git
+    - image: docker:18.09.6-git
     steps:
     - checkout
     - setup_remote_docker
