@@ -21,8 +21,9 @@ def latest_tag
 end
 
 namespace :base_image do
-  RakeDocker.define_image_tasks do |t|
-    t.image_name = 'consul-aws'
+  RakeDocker.define_image_tasks(
+      image_name: 'consul-aws'
+  ) do |t|
     t.work_directory = 'build/images'
 
     t.copy_spec = [
@@ -38,19 +39,12 @@ namespace :base_image do
 
     t.tags = [latest_tag.to_s, 'latest']
   end
-
-  desc 'Build and push image'
-  task :publish do
-    Rake::Task['base_image:clean'].invoke
-    Rake::Task['base_image:build'].invoke
-    Rake::Task['base_image:tag'].invoke
-    Rake::Task['base_image:push'].invoke
-  end
 end
 
 namespace :agent_image do
-  RakeDocker.define_image_tasks do |t|
-    t.image_name = 'consul-agent-aws'
+  RakeDocker.define_image_tasks(
+      image_name: 'consul-agent-aws'
+  ) do |t|
     t.work_directory = 'build/images'
 
     t.copy_spec = [
@@ -70,19 +64,12 @@ namespace :agent_image do
 
     t.tags = [latest_tag.to_s, 'latest']
   end
-
-  desc 'Build and push image'
-  task :publish do
-    Rake::Task['agent_image:clean'].invoke
-    Rake::Task['agent_image:build'].invoke
-    Rake::Task['agent_image:tag'].invoke
-    Rake::Task['agent_image:push'].invoke
-  end
 end
 
 namespace :server_image do
-  RakeDocker.define_image_tasks do |t|
-    t.image_name = 'consul-server-aws'
+  RakeDocker.define_image_tasks(
+      image_name: 'consul-server-aws'
+  ) do |t|
     t.work_directory = 'build/images'
 
     t.copy_spec = [
@@ -102,19 +89,12 @@ namespace :server_image do
 
     t.tags = [latest_tag.to_s, 'latest']
   end
-
-  desc 'Build and push image'
-  task :publish do
-    Rake::Task['server_image:clean'].invoke
-    Rake::Task['server_image:build'].invoke
-    Rake::Task['server_image:tag'].invoke
-    Rake::Task['server_image:push'].invoke
-  end
 end
 
 namespace :registrator_image do
-  RakeDocker.define_image_tasks do |t|
-    t.image_name = 'registrator-aws'
+  RakeDocker.define_image_tasks(
+      image_name: 'registrator-aws'
+  ) do |t|
     t.work_directory = 'build/images'
 
     t.copy_spec = [
@@ -129,14 +109,6 @@ namespace :registrator_image do
         "config/secrets/dockerhub/credentials.yaml")
 
     t.tags = [latest_tag.to_s, 'latest']
-  end
-
-  desc 'Build and push image'
-  task :publish do
-    Rake::Task['registrator_image:clean'].invoke
-    Rake::Task['registrator_image:build'].invoke
-    Rake::Task['registrator_image:tag'].invoke
-    Rake::Task['registrator_image:push'].invoke
   end
 end
 
