@@ -16,7 +16,7 @@ git pull
 
 ./go version:release
 
-./go base_image:publish
-./go agent_image:publish
-./go server_image:publish
-./go registrator_image:publish
+./go images:base:publish
+./go images:agent:publish
+./go images:server:publish
+./go images:registrator:publish

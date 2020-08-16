@@ -13,9 +13,4 @@ cd "$PROJECT_DIR"
 
 git crypt unlock
 
-./go version:bump[rc]
-
-./go images:base:publish
-./go images:agent:publish
-./go iamges:server:publish
-./go images:registrator:publish
+./go test:integration

@@ -1,9 +1,23 @@
 version: 2.1
 jobs:
-  prerelease:
-    working_directory: ~/docker-consul-aws
+  test:
+    working_directory: ~/source
     docker:
-      - image: docker:19.03.7-git
+      - image: docker:19.03-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: ./scripts/ci/common/install-bash.sh
+      - run: ./scripts/ci/common/install-ruby.sh
+      - run: ./scripts/ci/common/install-git-crypt.sh
+      - run: ./scripts/ci/common/install-docker-compose.sh
+      - run: ./scripts/ci/common/install-gpg-key.sh
+      - run: ./scripts/ci/common/configure-git.sh
+      - run: ./scripts/ci/steps/test.sh
+  prerelease:
+    working_directory: ~/source
+    docker:
+      - image: docker:19.03-git
     steps:
       - checkout
       - setup_remote_docker
@@ -14,9 +28,9 @@ jobs:
       - run: ./scripts/ci/common/configure-git.sh
       - run: ./scripts/ci/steps/prerelease.sh
   release:
-    working_directory: ~/docker-consul-aws
+    working_directory: ~/source
     docker:
-      - image: docker:19.03.7-git
+      - image: docker:19.03-git
     steps:
       - checkout
       - setup_remote_docker
@@ -31,7 +45,13 @@ workflows:
   version: 2
   pipeline:
     jobs:
+      - test:
+          filters:
+            branches:
+              only: master
       - prerelease:
+          requires:
+          - test
           filters:
             branches:
               only: master

@@ -5,7 +5,9 @@ require 'rake_ssh'
 require 'rake_terraform'
 require 'yaml'
 require 'git'
+require 'os'
 require 'semantic'
+require 'rspec/core/rake_task'
 
 require_relative 'lib/version'
 
@@ -22,6 +24,13 @@ def latest_tag
     Semantic::Version.new(tag.name)
   end.max
 end
+
+def tmpdir
+  base = (ENV["TMPDIR"] || "/tmp")
+  OS.osx? ? "/private" + base : base
+end
+
+task :default => :'test:integration'
 
 RakeSSH.define_key_tasks(
     namespace: :deploy_key,
@@ -68,102 +77,168 @@ end
 
 namespace :pipeline do
   task :prepare => [
+      :'circle_ci:project:follow',
       :'circle_ci:env_vars:ensure',
       :'circle_ci:ssh_keys:ensure',
       :'github:deploy_keys:ensure'
   ]
 end
 
-namespace :base_image do
-  RakeDocker.define_image_tasks(
-      image_name: 'consul-aws'
-  ) do |t|
-    t.work_directory = 'build/images'
+namespace :images do
+  namespace :base do
+    RakeDocker.define_image_tasks(
+        image_name: 'consul-aws'
+    ) do |t|
+      t.work_directory = 'build/images'
 
-    t.copy_spec = [
-        "src/consul-aws/Dockerfile",
-        "src/consul-aws/docker-entrypoint.sh",
-    ]
+      t.copy_spec = [
+          "src/consul-aws/Dockerfile",
+          "src/consul-aws/docker-entrypoint.sh",
+      ]
 
-    t.repository_name = 'consul-aws'
-    t.repository_url = 'infrablocks/consul-aws'
+      t.repository_name = 'consul-aws'
+      t.repository_url = 'infrablocks/consul-aws'
 
-    t.credentials = YAML.load_file(
-        "config/secrets/dockerhub/credentials.yaml")
+      t.credentials = YAML.load_file(
+          "config/secrets/dockerhub/credentials.yaml")
 
-    t.tags = [latest_tag.to_s, 'latest']
+      t.tags = [latest_tag.to_s, 'latest']
+    end
+  end
+
+  namespace :agent do
+    RakeDocker.define_image_tasks(
+        image_name: 'consul-agent-aws',
+        argument_names: [:base_image_version]
+    ) do |t, args|
+      args.with_defaults(base_image_version: latest_tag.to_s)
+
+      t.work_directory = 'build/images'
+
+      t.copy_spec = [
+          "src/consul-agent-aws/Dockerfile",
+          "src/consul-agent-aws/docker-entrypoint.sh",
+      ]
+
+      t.repository_name = 'consul-agent-aws'
+      t.repository_url = 'infrablocks/consul-agent-aws'
+
+      t.credentials = YAML.load_file(
+          "config/secrets/dockerhub/credentials.yaml")
+
+      t.build_args = {
+          BASE_IMAGE_VERSION: args.base_image_version
+      }
+
+      t.tags = [latest_tag.to_s, 'latest']
+    end
+  end
+
+  namespace :server do
+    RakeDocker.define_image_tasks(
+        image_name: 'consul-server-aws',
+        argument_names: [:base_image_version]
+    ) do |t, args|
+      args.with_defaults(base_image_version: latest_tag.to_s)
+
+      t.work_directory = 'build/images'
+
+      t.copy_spec = [
+          "src/consul-server-aws/Dockerfile",
+          "src/consul-server-aws/docker-entrypoint.sh",
+      ]
+
+      t.repository_name = 'consul-server-aws'
+      t.repository_url = 'infrablocks/consul-server-aws'
+
+      t.credentials = YAML.load_file(
+          "config/secrets/dockerhub/credentials.yaml")
+
+      t.build_args = {
+          BASE_IMAGE_VERSION: args.base_image_version
+      }
+
+      t.tags = [latest_tag.to_s, 'latest']
+    end
+  end
+
+  namespace :registrator do
+    RakeDocker.define_image_tasks(
+        image_name: 'registrator-aws'
+    ) do |t|
+      t.work_directory = 'build/images'
+
+      t.copy_spec = [
+          "src/registrator-aws/Dockerfile",
+          "src/registrator-aws/docker-entrypoint.sh",
+      ]
+
+      t.repository_name = 'registrator-aws'
+      t.repository_url = 'infrablocks/registrator-aws'
+
+      t.credentials = YAML.load_file(
+          "config/secrets/dockerhub/credentials.yaml")
+
+      t.tags = [latest_tag.to_s, 'latest']
+    end
+  end
+
+  desc "Build all images"
+  task :build do
+    [
+        'images:base',
+        'images:agent',
+        'images:server',
+        'images:registrator'
+    ].each do |t|
+      Rake::Task["#{t}:build"].invoke('latest')
+      Rake::Task["#{t}:tag"].invoke('latest')
+    end
   end
 end
 
-namespace :agent_image do
-  RakeDocker.define_image_tasks(
-      image_name: 'consul-agent-aws'
-  ) do |t|
-    t.work_directory = 'build/images'
+namespace :dependencies do
+  namespace :test do
+    desc "Provision spec dependencies"
+    task :provision do
+      project_name = "docker_consul_aws_test"
+      compose_file = "spec/dependencies.yml"
 
-    t.copy_spec = [
-        "src/consul-agent-aws/Dockerfile",
-        "src/consul-agent-aws/docker-entrypoint.sh",
-    ]
+      project_name_switch = "--project-name #{project_name}"
+      compose_file_switch = "--file #{compose_file}"
+      detach_switch = "--detach"
+      remove_orphans_switch = "--remove-orphans"
 
-    t.repository_name = 'consul-agent-aws'
-    t.repository_url = 'infrablocks/consul-agent-aws'
+      command_switches = "#{compose_file_switch} #{project_name_switch}"
+      subcommand_switches = "#{detach_switch} #{remove_orphans_switch}"
 
-    t.credentials = YAML.load_file(
-        "config/secrets/dockerhub/credentials.yaml")
+      sh({
+          "TMPDIR" => tmpdir,
+      }, "docker-compose #{command_switches} up #{subcommand_switches}")
+    end
 
-    t.build_args = {
-        BASE_IMAGE_VERSION: latest_tag.to_s
-    }
+    desc "Destroy spec dependencies"
+    task :destroy do
+      project_name = "docker_consul_aws_test"
+      compose_file = "spec/dependencies.yml"
 
-    t.tags = [latest_tag.to_s, 'latest']
+      project_name_switch = "--project-name #{project_name}"
+      compose_file_switch = "--file #{compose_file}"
+
+      command_switches = "#{compose_file_switch} #{project_name_switch}"
+
+      sh({
+          "TMPDIR" => tmpdir,
+      }, "docker-compose #{command_switches} down")
+    end
   end
 end
 
-namespace :server_image do
-  RakeDocker.define_image_tasks(
-      image_name: 'consul-server-aws'
-  ) do |t|
-    t.work_directory = 'build/images'
-
-    t.copy_spec = [
-        "src/consul-server-aws/Dockerfile",
-        "src/consul-server-aws/docker-entrypoint.sh",
-    ]
-
-    t.repository_name = 'consul-server-aws'
-    t.repository_url = 'infrablocks/consul-server-aws'
-
-    t.credentials = YAML.load_file(
-        "config/secrets/dockerhub/credentials.yaml")
-
-    t.build_args = {
-        BASE_IMAGE_VERSION: latest_tag.to_s
-    }
-
-    t.tags = [latest_tag.to_s, 'latest']
-  end
-end
-
-namespace :registrator_image do
-  RakeDocker.define_image_tasks(
-      image_name: 'registrator-aws'
-  ) do |t|
-    t.work_directory = 'build/images'
-
-    t.copy_spec = [
-        "src/registrator-aws/Dockerfile",
-        "src/registrator-aws/docker-entrypoint.sh",
-    ]
-
-    t.repository_name = 'registrator-aws'
-    t.repository_url = 'infrablocks/registrator-aws'
-
-    t.credentials = YAML.load_file(
-        "config/secrets/dockerhub/credentials.yaml")
-
-    t.tags = [latest_tag.to_s, 'latest']
-  end
+namespace :test do
+  RSpec::Core::RakeTask.new(:integration => [
+      'images:build',
+      'dependencies:test:provision'
+  ])
 end
 
 namespace :version do

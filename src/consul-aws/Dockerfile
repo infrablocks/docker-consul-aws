@@ -2,7 +2,7 @@ FROM infrablocks/alpine-aws-s3-config:0.18.0
 
 # Inspired by hashicorp/docker-consul
 
-ENV CONSUL_VERSION=1.7.7
+ENV CONSUL_VERSION=1.8.3
 ENV HASHICORP_RELEASES=https://releases.hashicorp.com
 
 RUN addgroup consul && \
