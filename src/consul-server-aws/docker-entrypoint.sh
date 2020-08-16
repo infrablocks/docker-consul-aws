@@ -1,3 +1,3 @@
 #!/bin/sh
 
-exec /consul/bin/docker-entrypoint.sh agent -server
+exec /opt/consul/bin/docker-entrypoint.sh agent -server

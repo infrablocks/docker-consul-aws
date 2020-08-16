@@ -20,13 +20,13 @@ RUN mkdir -p /go/bin \
 RUN cd /go/src/github.com/gliderlabs/registrator \
       && git config --global http.https://gopkg.in.followRedirects true \
       && dep ensure \
-      && go build -ldflags "-X main.Version=$(cat VERSION)" -o /bin/registrator
+      && go build -ldflags "-X main.Version=$(cat VERSION)" -o /opt/registrator/bin/registrator
 
 FROM infrablocks/alpine-aws-s3-config:0.18.0
 
-COPY --from=builder /bin/registrator /registrator/bin/registrator
+COPY --from=builder /opt/registrator/bin/registrator /opt/registrator/bin/registrator
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-COPY docker-entrypoint.sh /registrator/bin/docker-entrypoint.sh
+COPY docker-entrypoint.sh /opt/registrator/bin/docker-entrypoint.sh
 
-ENV STARTUP_SCRIPT_PATH "/registrator/bin/docker-entrypoint.sh"
+ENV STARTUP_SCRIPT_PATH "/opt/registrator/bin/docker-entrypoint.sh"
