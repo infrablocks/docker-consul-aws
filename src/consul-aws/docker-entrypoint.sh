@@ -71,8 +71,12 @@ fi
 if [[ "$1" = 'agent' ]]; then
     shift
     set -- /opt/consul/bin/consul agent \
+        \
         -data-dir="$CONSUL_DATA_DIR" \
         -config-dir="$CONSUL_CONFIG_DIR" \
+        \
+        -log-json \
+        \
         ${CONSUL_BIND} \
         ${CONSUL_CLIENT} \
         ${CONSUL_UI} \
