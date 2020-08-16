@@ -22,7 +22,7 @@ RUN cd /go/src/github.com/gliderlabs/registrator \
       && dep ensure \
       && go build -ldflags "-X main.Version=$(cat VERSION)" -o /bin/registrator
 
-FROM infrablocks/alpine-aws-s3-config:0.6.0
+FROM infrablocks/alpine-aws-s3-config:0.18.0
 
 COPY --from=builder /bin/registrator /registrator/bin/registrator
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
