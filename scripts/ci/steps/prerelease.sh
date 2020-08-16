@@ -17,5 +17,5 @@ git crypt unlock
 
 ./go images:base:publish
 ./go images:agent:publish
-./go iamges:server:publish
+./go images:server:publish
 ./go images:registrator:publish
