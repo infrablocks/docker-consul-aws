@@ -105,6 +105,4 @@ if [[ "$1" = '/opt/consul/bin/consul' && -z "${CONSUL_DISABLE_PERM_MGMT+x}" ]]; 
     set -- su-exec consul:consul /opt/consul/bin/consul "$@"
 fi
 
-echo "$@"
-
 exec "$@"

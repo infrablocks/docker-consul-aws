@@ -124,16 +124,17 @@ describe 'consul-aws consul' do
 
       after(:all, &:reset_docker_backend)
 
-      it "includes the bind interface with the correct IP address" do
+      it "includes the bind option with the correct IP address" do
         ip_address = command(
             "ip -o -4 addr list eth0 " +
                 "| head -n1 " +
                 "| awk '{print $4}' " +
                 "| cut -d/ -f1")
             .stdout
+            .strip
 
         expect(process('/opt/consul/bin/consul').args)
-            .not_to(match(/-bind=#{ip_address}/))
+            .to(match(/-bind=#{Regexp.escape(ip_address)}/))
       end
     end
 
@@ -176,16 +177,87 @@ describe 'consul-aws consul' do
 
       after(:all, &:reset_docker_backend)
 
-      it "includes the client interface with the correct IP address" do
+      it "includes the client option with the correct IP address" do
         ip_address = command(
             "ip -o -4 addr list eth0 " +
                 "| head -n1 " +
                 "| awk '{print $4}' " +
                 "| cut -d/ -f1")
             .stdout
+            .strip
 
         expect(process('/opt/consul/bin/consul').args)
-            .not_to(match(/-client=#{ip_address}/))
+            .to(match(/-client=#{Regexp.escape(ip_address)}/))
+      end
+    end
+
+    describe 'without client address provided' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path)
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "does not include the client option" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-client/))
+      end
+    end
+
+    describe 'with client address provided' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_CLIENT_ADDRESS' => '0.0.0.0'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "includes the client option with the provided IP address" do
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(/-client=0\.0\.0\.0/))
+      end
+    end
+
+    describe 'with both client interface and address provided' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_CLIENT_INTERFACE' => 'eth0',
+                'CONSUL_CLIENT_ADDRESS' => '0.0.0.0'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "prioritises the provided address" do
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(/-client=0\.0\.0\.0/))
       end
     end
   end
