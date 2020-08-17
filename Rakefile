@@ -162,34 +162,12 @@ namespace :images do
     end
   end
 
-  namespace :registrator do
-    RakeDocker.define_image_tasks(
-        image_name: 'registrator-aws'
-    ) do |t|
-      t.work_directory = 'build/images'
-
-      t.copy_spec = [
-          "src/registrator-aws/Dockerfile",
-          "src/registrator-aws/docker-entrypoint.sh",
-      ]
-
-      t.repository_name = 'registrator-aws'
-      t.repository_url = 'infrablocks/registrator-aws'
-
-      t.credentials = YAML.load_file(
-          "config/secrets/dockerhub/credentials.yaml")
-
-      t.tags = [latest_tag.to_s, 'latest']
-    end
-  end
-
   desc "Build all images"
   task :build do
     [
         'images:base',
         'images:agent',
         'images:server',
-        'images:registrator'
     ].each do |t|
       Rake::Task["#{t}:build"].invoke('latest')
       Rake::Task["#{t}:tag"].invoke('latest')
