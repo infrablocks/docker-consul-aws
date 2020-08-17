@@ -48,6 +48,9 @@ describe 'consul-aws consul' do
             bucket_path: s3_bucket_path,
             object_path: s3_env_file_object_path)
 
+        execute_command('chown -R root:root /opt/consul/data')
+        execute_command('chown -R root:root /opt/consul/config')
+
         execute_docker_entrypoint(
             arguments: ["agent", "-server"],
             started_indicator: "Started .* server")
@@ -57,6 +60,23 @@ describe 'consul-aws consul' do
 
       it "runs a consul agent" do
         expect(process('/opt/consul/bin/consul')).to be_running
+      end
+
+      it 'ensures the correct ownership of /opt/consul/data' do
+        expect(file('/opt/consul/data')).to(be_owned_by('consul'))
+        expect(file('/opt/consul/data')).to(be_grouped_into('consul'))
+      end
+
+      it 'ensures the correct ownership of /opt/consul/config' do
+        expect(file('/opt/consul/config')).to(be_owned_by('consul'))
+        expect(file('/opt/consul/config')).to(be_grouped_into('consul'))
+      end
+
+      it "does not set any capabilities on the consul binary" do
+        capabilities = command('getcap /opt/consul/bin/consul').stdout
+
+        expect(capabilities)
+            .not_to(match(/cap_net_bind_service/))
       end
 
       it 'runs with the consul user' do
@@ -83,26 +103,30 @@ describe 'consul-aws consul' do
         expect(process('/opt/consul/bin/consul').args)
             .to(match(/-log-json/))
       end
-    end
-
-    describe 'without bind interface provided' do
-      before(:all) do
-        create_env_file(
-            endpoint_url: s3_endpoint_url,
-            region: s3_bucket_region,
-            bucket_path: s3_bucket_path,
-            object_path: s3_env_file_object_path)
-
-        execute_docker_entrypoint(
-            arguments: ["agent", "-server"],
-            started_indicator: "Started .* server")
-      end
-
-      after(:all, &:reset_docker_backend)
 
       it "does not include the bind option" do
         expect(process('/opt/consul/bin/consul').args)
             .not_to(match(/-bind/))
+      end
+
+      it "does not include the client option" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-client/))
+      end
+
+      it "does not enable the UI" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-ui/))
+      end
+
+      it "does not include any retry join options" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-retry-join/))
+      end
+
+      it "does not include the bootstrap expect option" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-bootstrap-expect/))
       end
     end
 
@@ -138,27 +162,6 @@ describe 'consul-aws consul' do
       end
     end
 
-    describe 'without client interface provided' do
-      before(:all) do
-        create_env_file(
-            endpoint_url: s3_endpoint_url,
-            region: s3_bucket_region,
-            bucket_path: s3_bucket_path,
-            object_path: s3_env_file_object_path)
-
-        execute_docker_entrypoint(
-            arguments: ["agent", "-server"],
-            started_indicator: "Started .* server")
-      end
-
-      after(:all, &:reset_docker_backend)
-
-      it "does not include the client option" do
-        expect(process('/opt/consul/bin/consul').args)
-            .not_to(match(/-client/))
-      end
-    end
-
     describe 'with client interface provided' do
       before(:all) do
         create_env_file(
@@ -188,27 +191,6 @@ describe 'consul-aws consul' do
 
         expect(process('/opt/consul/bin/consul').args)
             .to(match(/-client=#{Regexp.escape(ip_address)}/))
-      end
-    end
-
-    describe 'without client address provided' do
-      before(:all) do
-        create_env_file(
-            endpoint_url: s3_endpoint_url,
-            region: s3_bucket_region,
-            bucket_path: s3_bucket_path,
-            object_path: s3_env_file_object_path)
-
-        execute_docker_entrypoint(
-            arguments: ["agent", "-server"],
-            started_indicator: "Started .* server")
-      end
-
-      after(:all, &:reset_docker_backend)
-
-      it "does not include the client option" do
-        expect(process('/opt/consul/bin/consul').args)
-            .not_to(match(/-client/))
       end
     end
 
@@ -261,28 +243,6 @@ describe 'consul-aws consul' do
       end
     end
 
-    describe 'without UI enabled flag' do
-      before(:all) do
-        create_env_file(
-            endpoint_url: s3_endpoint_url,
-            region: s3_bucket_region,
-            bucket_path: s3_bucket_path,
-            object_path: s3_env_file_object_path,
-        )
-
-        execute_docker_entrypoint(
-            arguments: ["agent", "-server"],
-            started_indicator: "Started .* server")
-      end
-
-      after(:all, &:reset_docker_backend)
-
-      it "does not enable the UI" do
-        expect(process('/opt/consul/bin/consul').args)
-            .not_to(match(/-ui/))
-      end
-    end
-
     describe 'with UI enabled flag provided and yes' do
       before(:all) do
         create_env_file(
@@ -328,6 +288,180 @@ describe 'consul-aws consul' do
       it "does not enable the UI" do
         expect(process('/opt/consul/bin/consul').args)
             .not_to(match(/-ui/))
+      end
+    end
+
+    describe 'with local configuration provided' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_LOCAL_CONFIGURATION' => '{\"datacenter\": \"london\"}'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "adds the configuration to the configuration directory" do
+        expect(file('/opt/consul/config/local.json').content)
+            .to(eq("{\"datacenter\": \"london\"}\n"))
+      end
+    end
+
+    describe 'with EC2 auto join tag key and value' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_EC2_AUTO_JOIN_TAG_KEY' => 'component',
+                'CONSUL_EC2_AUTO_JOIN_TAG_VALUE' => 'consul-cluster'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "includes retry join option" do
+        retry_join_string =
+            "provider=aws tag_key=component tag_value=consul-cluster"
+
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(
+                /-retry-join #{retry_join_string}/))
+      end
+    end
+
+    describe 'with server addresses' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_SERVER_ADDRESSES' =>
+                    'server1.example.com,server2.example.com',
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "includes retry join option" do
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(
+                /-retry-join server1.example.com/))
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(
+                /-retry-join server2.example.com/))
+      end
+    end
+
+    describe 'with expected servers provided' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_EXPECTED_SERVERS' => '3',
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "includes bootstrap expect option" do
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(/-bootstrap-expect 3/))
+      end
+    end
+
+    describe 'with privileged ports allowed' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_ALLOW_PRIVILEGED_PORTS' => 'yes',
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "sets the correct capability on the consul binary" do
+        capabilities = command('getcap /opt/consul/bin/consul').stdout
+
+        expect(capabilities)
+            .to(match(/cap_net_bind_service\+ep/))
+      end
+    end
+
+    describe 'with permission management disabled' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_DISABLE_PERM_MGMT' => 'yes',
+            })
+
+        execute_command('chown -R root:root /opt/consul/data')
+        execute_command('chown -R root:root /opt/consul/config')
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it 'does not change ownership of /opt/consul/data' do
+        expect(file('/opt/consul/data')).to(be_owned_by('root'))
+        expect(file('/opt/consul/data')).to(be_grouped_into('root'))
+      end
+
+      it 'ensures the correct ownership of /opt/consul/config' do
+        expect(file('/opt/consul/config')).to(be_owned_by('root'))
+        expect(file('/opt/consul/config')).to(be_grouped_into('root'))
+      end
+
+      it 'runs with the root user' do
+        expect(process('/opt/consul/bin/consul').user)
+            .to(eq('root'))
+      end
+
+      it 'runs with the root group' do
+        expect(process('/opt/consul/bin/consul').group)
+            .to(eq('root'))
       end
     end
   end

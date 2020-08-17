@@ -58,10 +58,10 @@ if [[ "${CONSUL_ENABLE_UI}" = "yes" ]]; then
 fi
 
 CONSUL_DATA_DIR=/opt/consul/data
-CONSUL_CONFIG_DIR=/opt/consul/config
+CONSUL_CONFIGURATION_DIR=/opt/consul/config
 
-if [[ -n "$CONSUL_LOCAL_CONFIG" ]]; then
-	echo "$CONSUL_LOCAL_CONFIG" > "$CONSUL_CONFIG_DIR/local.json"
+if [[ -n "$CONSUL_LOCAL_CONFIGURATION" ]]; then
+	echo "$CONSUL_LOCAL_CONFIGURATION" > "$CONSUL_CONFIGURATION_DIR/local.json"
 fi
 
 if [[ "${1:0:1}" = '-' ]]; then
@@ -73,7 +73,7 @@ if [[ "$1" = 'agent' ]]; then
     set -- /opt/consul/bin/consul agent \
         \
         -data-dir="$CONSUL_DATA_DIR" \
-        -config-dir="$CONSUL_CONFIG_DIR" \
+        -config-dir="$CONSUL_CONFIGURATION_DIR" \
         \
         -log-json \
         \
