@@ -260,6 +260,76 @@ describe 'consul-aws consul' do
             .to(match(/-client=0\.0\.0\.0/))
       end
     end
+
+    describe 'without UI enabled flag' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+        )
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "does not enable the UI" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-ui/))
+      end
+    end
+
+    describe 'with UI enabled flag provided and yes' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_ENABLE_UI' => 'yes'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "enables the UI" do
+        expect(process('/opt/consul/bin/consul').args)
+            .to(match(/-ui/))
+      end
+    end
+
+    describe 'with UI enabled flag provided and not yes' do
+      before(:all) do
+        create_env_file(
+            endpoint_url: s3_endpoint_url,
+            region: s3_bucket_region,
+            bucket_path: s3_bucket_path,
+            object_path: s3_env_file_object_path,
+            env: {
+                'CONSUL_ENABLE_UI' => 'no'
+            })
+
+        execute_docker_entrypoint(
+            arguments: ["agent", "-server"],
+            started_indicator: "Started .* server")
+      end
+
+      after(:all, &:reset_docker_backend)
+
+      it "does not enable the UI" do
+        expect(process('/opt/consul/bin/consul').args)
+            .not_to(match(/-ui/))
+      end
+    end
   end
 
   def reset_docker_backend
