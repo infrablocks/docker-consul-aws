@@ -2,7 +2,7 @@ FROM infrablocks/alpine-aws-s3-config:0.20.0
 
 # Inspired by hashicorp/docker-consul
 
-ENV CONSUL_VERSION=1.8.3
+ENV CONSUL_VERSION=1.8.10
 ENV HASHICORP_RELEASES=https://releases.hashicorp.com
 
 RUN addgroup consul && \
@@ -14,14 +14,14 @@ RUN mkdir -p /opt/consul/bin && \
     chown -R consul:consul /opt/consul
 
 RUN set -eux && \
-    apk add --no-cache ca-certificates gnupg libcap openssl su-exec iputils && \
-    gpg --keyserver pool.sks-keyservers.net --recv-keys 91A6E7F85D05C65630BEF18951852D87348FFC4C && \
+    apk add --no-cache ca-certificates curl dumb-init gnupg libcap openssl su-exec iputils jq libc6-compat iptables && \
+    gpg --keyserver pool.sks-keyservers.net --recv-keys C874011F0AB405110D02105534365D9472D7468F && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
     apkArch="$(apk --print-arch)" && \
     case "${apkArch}" in \
         aarch64) consulArch='arm64' ;; \
-        armhf) consulArch='arm' ;; \
+        armhf) consulArch='armhfv6' ;; \
         x86) consulArch='386' ;; \
         x86_64) consulArch='amd64' ;; \
         *) echo >&2 "error: unsupported architecture: ${apkArch} (see ${HASHICORP_RELEASES}/consul/${CONSUL_VERSION}/)" && exit 1 ;; \
@@ -34,6 +34,7 @@ RUN set -eux && \
     unzip -d /opt/consul/bin consul_${CONSUL_VERSION}_linux_${consulArch}.zip && \
     cd /tmp && \
     rm -rf /tmp/build && \
+    gpgconf --kill all && \
     apk del gnupg openssl && \
     rm -rf /root/.gnupg && \
     /opt/consul/bin/consul version

@@ -35,7 +35,7 @@ describe 'consul-aws consul' do
 
     it "includes the consul command" do
       expect(command('/opt/consul/bin/consul --version').stdout)
-          .to match /1.8.3/
+          .to match /1.8.10/
     end
   end
 
