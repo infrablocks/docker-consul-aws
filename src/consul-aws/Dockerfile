@@ -15,7 +15,7 @@ RUN mkdir -p /opt/consul/bin && \
 
 RUN set -eux && \
     apk add --no-cache ca-certificates curl dumb-init gnupg libcap openssl su-exec iputils jq libc6-compat iptables && \
-    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys C874011F0AB405110D02105534365D9472D7468F && \
+    gpg --keyserver keyserver.ubuntu.com --recv-keys C874011F0AB405110D02105534365D9472D7468F && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
     apkArch="$(apk --print-arch)" && \
