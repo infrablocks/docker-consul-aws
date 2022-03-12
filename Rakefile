@@ -129,6 +129,8 @@ namespace :images do
       t.credentials = YAML.load_file(
           "config/secrets/dockerhub/credentials.yaml")
 
+      t.platform = 'linux/amd64'
+
       t.tags = [latest_tag.to_s, 'latest']
     end
   end
@@ -157,6 +159,8 @@ namespace :images do
           BASE_IMAGE_VERSION: args.base_image_version
       }
 
+      t.platform = 'linux/amd64'
+
       t.tags = [latest_tag.to_s, 'latest']
     end
   end
@@ -184,6 +188,8 @@ namespace :images do
       t.build_args = {
           BASE_IMAGE_VERSION: args.base_image_version
       }
+
+      t.platform = 'linux/amd64'
 
       t.tags = [latest_tag.to_s, 'latest']
     end
