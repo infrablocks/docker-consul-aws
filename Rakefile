@@ -249,7 +249,9 @@ namespace :test do
   RSpec::Core::RakeTask.new(:integration => [
       'images:build',
       'dependencies:test:provision'
-  ])
+  ]) do |t|
+    t.rspec_opts = ["--format", "documentation"]
+  end
 end
 
 namespace :version do
