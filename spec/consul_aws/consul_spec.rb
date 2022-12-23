@@ -37,7 +37,7 @@ describe 'consul-aws consul' do
 
     it 'includes the consul command' do
       expect(command('/opt/consul/bin/consul --version').stdout)
-        .to match(/1.8.10/)
+        .to match(/1.14.3/)
     end
   end
 
@@ -451,7 +451,7 @@ describe 'consul-aws consul' do
         capabilities = command('getcap /opt/consul/bin/consul').stdout
 
         expect(capabilities)
-          .to(match(/cap_net_bind_service\+ep/))
+          .to(match(/cap_net_bind_service=ep/))
       end
     end
 

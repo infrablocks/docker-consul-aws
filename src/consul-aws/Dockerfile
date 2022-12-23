@@ -1,8 +1,8 @@
-FROM infrablocks/alpine-aws-s3-config:0.22.0
+FROM infrablocks/alpine-aws-s3-config:0.23.0
 
 # Inspired by hashicorp/docker-consul
 
-ENV CONSUL_VERSION=1.8.10
+ENV CONSUL_VERSION=1.14.3
 ENV HASHICORP_RELEASES=https://releases.hashicorp.com
 
 RUN addgroup consul && \
@@ -14,7 +14,7 @@ RUN mkdir -p /opt/consul/bin && \
     chown -R consul:consul /opt/consul
 
 RUN set -eux && \
-    apk add --no-cache ca-certificates curl dumb-init gnupg libcap openssl su-exec iputils jq libc6-compat iptables && \
+    apk add --no-cache ca-certificates curl dumb-init gnupg libcap openssl su-exec iputils jq libc6-compat iptables tzdata && \
     gpg --keyserver keyserver.ubuntu.com --recv-keys C874011F0AB405110D02105534365D9472D7468F && \
     mkdir -p /tmp/build && \
     cd /tmp/build && \
