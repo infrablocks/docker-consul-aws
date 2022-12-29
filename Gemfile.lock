@@ -1493,13 +1493,13 @@ GEM
       addressable (>= 2.3.5)
       faraday (>= 0.17.3, < 3)
     semantic (1.6.1)
-    serverspec (2.42.0)
+    serverspec (2.42.1)
       multi_json
       rspec (~> 3.0)
       rspec-its
       specinfra (~> 2.72)
     sfl (2.3)
-    specinfra (2.83.4)
+    specinfra (2.84.0)
       net-scp
       net-ssh (>= 2.7)
       net-telnet (= 0.1.1)
