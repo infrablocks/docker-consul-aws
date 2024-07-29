@@ -1,9 +1,13 @@
 version: 2.1
 
 orbs:
-  slack: circleci/slack@4.8.3
+  slack: circleci/slack@4.13.2
 
-defaults: &defaults
+base_container: &base_container
+  image: buildpack-deps:buster
+
+build_container: &build_container
+  resource_class: medium
   docker:
     - image: ruby:3.1.1
 
