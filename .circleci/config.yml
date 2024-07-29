@@ -97,7 +97,7 @@ commands:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:GNPwRs9Nvc5LUPmVrHjJMt/iWAlM+I86sSGrkIYytLE"
+            - "SHA256:gBL/v0YS/5IzUi6awykmnq8oZZTgITSrMyE59v5iaKw"
 
   configure_tools:
     steps:
